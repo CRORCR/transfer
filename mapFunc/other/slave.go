@@ -29,7 +29,7 @@ var savePackage = false
 var tickerEnd *time.Ticker = time.NewTicker(1 * time.Hour)
 var tickerStart *time.Ticker = time.NewTicker(1 * time.Hour)
 var selectLevel *time.Ticker = time.NewTicker(1 * time.Hour)
-var cleanDB  = time.NewTicker(60 * time.Second)
+var cleanDB *time.Ticker = time.NewTicker(40 * time.Second)
 
 func main() {
 	//time.AfterFunc(12*time.Second, func() {

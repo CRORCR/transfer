@@ -107,10 +107,14 @@ func Client() {
 	case send:=<-writeInfo:
 		for i := 0; i < len(send); i++ {
 			conn := dialSer(ADDR_1)
-			key := GetKey(send[i])
+			key,err := GetKey(send[i])
+			if err!=nil{
+				conn.Close()
+				continue
+			}
 			sendMess := make([]string,recvMessageNum)
 			json.Unmarshal(key,sendMess)
-			err := json.NewEncoder(conn).Encode(&sendMess)
+			err = json.NewEncoder(conn).Encode(&sendMess)
 			if err != nil {
 				//fmt.Println("序列化失败")
 				return

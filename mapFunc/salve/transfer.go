@@ -43,7 +43,7 @@ func proess(conn net.Conn) {
 			conn.Close()
 			levelDB.manage(gotMap)
 			gotMap = make([]string, 0)
-				if len(levelDBSlice) >= trainNum {
+			if len(levelDBSlice) >= trainNum {
 				//打包时间 生成一个包   12w数据备份清空,map去重清空 只留下levelDB供webserver使用
 				block=append(block,levelDBSlice)
 				fmt.Println("已经有12w了")
@@ -88,21 +88,17 @@ func (level LevelDB) manage(gotMap []string) {
 	if count!=1{
 		fmt.Println("重复记录:",atomic.LoadInt32(&count))
 		atomic.CompareAndSwapInt32(&count,120000,1)
+		atomic.CompareAndSwapInt32(&count,120001,1)
 		levelDB.MessSlcie=make([]string,0)
 		//fmt.Println("levelDB.MessSlcie应该空的:",len(levelDB.MessSlcie))
 		return
 	}
-	bytes, err := json.Marshal(levelDB.MessSlcie)
 	//if count!=0{
 	//	fmt.Printf("如果重复,序列化是什么,byte:%v err:%v \n",bytes, err)
 	//}
-
-	if err != nil {
-		//fmt.Println("存储序列化失败")
-		return
-	}
 	intType := fmt.Sprintf("%v",time.Now().UnixNano())
-	levelPut([]byte(intType), bytes)
+	//levelPut([]byte(intType), bytes)
+	levelDB.MessSlcie = make([]string, 0)
 	//0-12w个消息 存入slice中,打包的时候,需要情况这个切片
 	levelDBSlice=append(levelDBSlice,intType)
 	return

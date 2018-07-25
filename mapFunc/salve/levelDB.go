@@ -42,10 +42,7 @@ func levelPut(key []byte, val []byte) {
 	//fmt.Printf("存储了 %v %v \n", key, val)
 }
 
-func GetKey(key string) []byte {
-	ids, err := db.Get([]byte(key), nil)
-	if err != nil {
-		panic(err)
-	}
-	return ids
+func GetKey(key string)(ids []byte,err error) {
+	ids, err = db.Get([]byte(key), nil)
+	return ids,err
 }

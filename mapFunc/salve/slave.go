@@ -4,7 +4,10 @@ import (
 	"crypto/md5"
 	"encoding/json"
 	"fmt"
+	"os"
 	"time"
+
+	"github.com/syndtr/goleveldb/leveldb"
 )
 
 const(
@@ -26,6 +29,7 @@ var levelDB *LevelDB
 var savePackage=false
 var tickerEnd *time.Ticker=time.NewTicker(1 * time.Hour)
 var tickerStart *time.Ticker=time.NewTicker(1 * time.Hour)
+var cleanDB *time.Ticker = time.NewTicker(40 * time.Second)
 
 func main() {
 	//time.AfterFunc(12*time.Second, func() {
@@ -57,6 +61,19 @@ func main() {
 			levelPut([]byte(nano), bytes)
 			levelDB.MessSlcie = make([]string, 0)      //保存完,置空
 			fmt.Println("保存后应该清空:", levelDB.MessSlcie) //todo
+		case <-cleanDB.C:
+			db.Close()
+			time.Sleep(10*time.Nanosecond)
+			err := os.RemoveAll("./db")
+			if err != nil {
+				panic("删除db失败")
+			}
+			db, _ = leveldb.OpenFile("./db", nil)
+
+			block = make([][]string, 0)
+			levelDBSlice=make([]string,0)
+			levelDB.MessSlcie=make([]string,0)
+			levelDB.MessMap=make(map[[16]byte]int,0)
 		default:
 		}
 	}
