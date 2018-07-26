@@ -20,14 +20,14 @@ func init() {
 var err error
 
 func TestLevel(t *testing.T) {
-	db, err = leveldb.OpenFile("./db_test/db", nil)
-	if err!=nil{
-		fmt.Println("err:",err)
-	}
-	defer db.Close()
-	s := blockTest[0][0]
-	page := GetPage(s, 10, 20)
-	for k,v:=range page{
-		fmt.Println(k,v)
-	}
+		db, err = leveldb.OpenFile("./db_test/db", nil)
+		if err!=nil{
+			fmt.Println("err:",err)
+		}
+		s := "1532417760170473200"
+		page := GetPage(s, 60, 90)
+		for _,v:=range page{
+			fmt.Println(len(v))
+		}
+		db.Close()
 }

@@ -4,16 +4,14 @@ import (
 	"crypto/md5"
 	"encoding/json"
 	"fmt"
-	"os"
 	"time"
 
-	"github.com/syndtr/goleveldb/leveldb"
 )
 
 const (
 	//连接主节点
-	//ADDR_1 = "localhost:9004"
-	ADDR_1         = "192.168.1.4:9004"
+	ADDR_1 = "localhost:9004"
+	//ADDR_1         = "192.168.1.4:9004"
 	recvMessageNum = 10000
 	train          = 120000
 	trainNum       = 12 //12秒轮训
@@ -29,7 +27,7 @@ var savePackage = false
 var tickerEnd *time.Ticker = time.NewTicker(1 * time.Hour)
 var tickerStart *time.Ticker = time.NewTicker(1 * time.Hour)
 var selectLevel *time.Ticker = time.NewTicker(1 * time.Hour)
-var cleanDB *time.Ticker = time.NewTicker(40 * time.Second)
+var cleanDB *time.Ticker = time.NewTicker(100 * time.Second)
 
 func main() {
 	//time.AfterFunc(12*time.Second, func() {
@@ -74,16 +72,14 @@ func main() {
 			page := GetPage(s, 10, 20)
 			fmt.Printf("我就想看看package查询的分页是啥:%v\n", page)
 		case <-cleanDB.C:
-			db.Close()
-			time.Sleep(10*time.Nanosecond)
-			err := os.RemoveAll("./db")
-			if err != nil {
-				panic("删除db失败")
-			}
-			db, _ = leveldb.OpenFile("./db", nil)
-
-			block = make([][]string, 0)
+			//db.Close()
+			//err := os.RemoveAll("./db")
+			//if err != nil {
+			//	panic("删除db失败")
+			//}
+			//db, _ = leveldb.OpenFile("./db", nil)
 			levelDBSlice=make([]string,0)
+			block = make([][]string, 0)
 			levelDB.MessSlcie=make([]string,0)
 			levelDB.MessMap=make(map[[16]byte]int,0)
 			writeInfo = make(chan []string,1)

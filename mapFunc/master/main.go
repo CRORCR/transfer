@@ -1,9 +1,9 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"time"
+
 )
 
 //程序还可以优化,----发送数据使用string 转 byte发送    去重使用byte 16位
@@ -12,10 +12,8 @@ import (
 //从节点 1.4 9004
 const (
 	//从节点ip
-	//ADDR_1 = "localhost:9003"
-	//ADDR_2 = "localhost:9004"
-	ADDR_1 = "192.168.1.3:9003"
-	ADDR_2 ="192.168.1.4:9004"
+	ADDR_1,ADDR_2 = "localhost:9003","localhost:9004"
+	//ADDR_1,ADDR_2 = "192.168.1.3:9003","192.168.1.4:9004"
 	recvMessageNum=10000
 	train=120000
 	trainNum       = 12 //12秒轮训
@@ -31,13 +29,11 @@ var closecreateMess = make(chan string)
 var levelDB *LevelDB
 
 //存储levelDB
-var saveBytes=make([]string,0)
-//存储包的key,包存储在levelDB中.供webServer使用
-var keySlice=make([]string,0)
-var tickerEnd *time.Ticker=time.NewTicker(20 * time.Second)
-var tickerStart *time.Ticker=time.NewTicker(20 * time.Second)
-var savePackage=true
+var tickerEnd =time.NewTicker(1 * time.Hour)
+var tickerStart =time.NewTicker(1 * time.Hour)
+var selectLevel *time.Ticker = time.NewTicker(10 * time.Hour)
 //以上是提供webServer相关参数
+var block = make([][]string, 0)
 
 var sendMess =make(chan string,1)//收到数据,可以往其他节点发送
 
@@ -46,7 +42,7 @@ var sendMess =make(chan string,1)//收到数据,可以往其他节点发送
 func main() {
 	levelDB=NewLevelDB()
 	//ticker := time.NewTicker(12 * time.Second)
-	time.AfterFunc(12*time.Second, func() {
+	/*time.AfterFunc(12*time.Second, func() {
 		//callOther()
 		savePackage=false //第一次打包控制,以后都是有定时器控制
 		nano := fmt.Sprintf("%v",time.Now().UnixNano())
@@ -68,7 +64,7 @@ func main() {
 		fmt.Println("0-20条数据是:")
 		for _,v:=range page{
 			fmt.Printf("%s\n",v)
-		}*/
+		}
 
 		closeLevelDB()
 
@@ -79,36 +75,36 @@ func main() {
 
 		//after:=time.Now().UnixNano()/1e6
 		//fmt.Println("after Func",after-startTimes)//todo
-	})
+	})*/
 
 	go getMessage()
-	go Server()
+	go webServer()
+	go ServerListen()
 	for{
 		select {
 		case <-closecreateMess:
 			//fmt.Println("开始client")
 			//go SendPeer()
 			go Client()
+		case <-selectLevel.C:
+			GetBlockKey2 := GetBlockKey()
+			fmt.Printf("我就想看看存的是啥:%+v\n", GetBlockKey2)
+			for k, v := range GetBlockKey2 {
+				fmt.Printf("key:%v value:%v\n", k, v)
+			}
+
+			fmt.Println("查询对应的数据 1 hour")
+			s := GetBlockKey2[0][2]
+			page := GetPage(s, 10, 20)
+			fmt.Printf("我就想看看package查询的分页是啥:%v\n", page)
 		case <-tickerStart.C:
+			fmt.Println("程序结束")
 			//se24:=time.Now().UnixNano()/1e6
 			//fmt.Println("24秒:",se24-startTimes)//todo
-			savePackage=true
+			//savePackage=true
 			//开始准备打包
 		case <-tickerEnd.C:
-			//12秒通知其他节点处理包
-			//callOther()
-			//se36:=time.Now().UnixNano()/1e6
-			//fmt.Println("36秒:",se36-startTimes)//todo
-			savePackage=false
-			nano := fmt.Sprintf("%v",time.Now().UnixNano())
-			//fmt.Println("保存的数据:",saveBytes)//todo
-			bytes, _ := json.Marshal(saveBytes)
-			levelPut([]byte(nano),bytes)
-			saveBytes=make([]string,0)//保存完,置空
-			//fmt.Println("保存后应该清空:",saveBytes)//todo
-		case <-sendMess:
-			//fmt.Println("开始发送其他节点", len(levelDB.MessSlcie))
-			//go SendPeer()
+			fmt.Println("程序结束")
 		default:
 		}
 	}

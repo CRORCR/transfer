@@ -40,7 +40,7 @@ func init() {
 func levelPut(key []byte, val []byte) {
 	db.Put(key, val, nil)
 	//if err!=nil{
-	//fmt.Println(" 存入就是有问题的 err:",err)
+		//fmt.Println(" 存入就是有问题的 err:",err)
 	//}
 	levelDB.MessSlcie = make([]string, 0)
 	//fmt.Printf("存储了 %v %v \n", key, val)

@@ -7,11 +7,12 @@ import (
 	"fmt"
 	"net"
 	"net/rpc"
+	"time"
 )
 
 //服务端监听自己端口
-func Server() {
-	listen, err := net.Listen("tcp", ":9012")
+func ServerListen() {
+	listen, err := net.Listen("tcp", ":9002")
 	if err != nil {
 		fmt.Println("端口占用")
 	}
@@ -54,6 +55,9 @@ func manage(gotMap []string) {
 }
 
 func Client() {
+	if len(block)!=0{
+		time.Sleep(time.Second*1)
+	}
 	//主节点需要往从节点都发送数据
 		conn := dialSer(addrList[0])
 		conn2 := dialSer(addrList[1])
