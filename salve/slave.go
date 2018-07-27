@@ -8,7 +8,7 @@ import (
 const (
 	//连接主节点
 	recvMessageNum = 10000
-	trainNum       = 12 //12秒轮训
+	trainNum       = 5 //12秒轮训
 )
 
 var block = make([][]string, 0)

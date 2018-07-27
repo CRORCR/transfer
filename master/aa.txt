@@ -1,0 +1,2 @@
+block_time=12
+send_num=40000

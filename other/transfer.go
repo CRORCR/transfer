@@ -91,6 +91,7 @@ func (level LevelDB) manage(gotMap []string) {
 	}
 	end := time.Now().UnixNano() / 1e6
 	fmt.Println("去重", end-start)
+	fmt.Println("一共多少数据",len(levelDB.MessSlcie))
 	//去重完成,存入数据库
 	bytes, err := json.Marshal(levelDB.MessSlcie)
 	if err != nil {

@@ -14,7 +14,7 @@ const (
 	//ADDR_1         = "192.168.1.4:9004"
 	recvMessageNum = 10000
 	train          = 120000
-	trainNum       = 12 //12秒轮训
+	trainNum       = 5 //12秒轮训
 )
 
 //需要连接的地址

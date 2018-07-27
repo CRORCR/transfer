@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"net"
 	"net/rpc"
-	"time"
 )
 
 //服务端监听自己端口
@@ -54,24 +53,31 @@ func manage(gotMap []string) {
 	}
 }
 
-func Client() {
-	if len(block)!=0{
-		time.Sleep(time.Second*1)
-	}
-	//主节点需要往从节点都发送数据
-		conn := dialSer(addrList[0])
-		conn2 := dialSer(addrList[1])
-		//fmt.Printf("整个节点是什么%s \n", levelDB.MessSlcie)
-		addMessage:=<-chMess
-		err := json.NewEncoder(conn).Encode(addMessage)
-		err2 := json.NewEncoder(conn2).Encode(addMessage)
-		if err != nil || err2!=nil{
-			fmt.Println("序列化失败")
-			return
-		}
-		conn.Close()
-		conn2.Close()
+var conn,conn2 net.Conn
+func conne(){
+	conn = dialSer(addrList[0])
+	conn2 = dialSer(addrList[1])
 }
+
+
+func Client() {
+	//主节点需要往从节点都发送数据
+	conne()
+		//fmt.Printf("整个节点是什么%s \n", levelDB.MessSlcie)
+	addMessage := <-chMess
+	//t := time.Now().UnixNano() / 1e6
+	err := json.NewEncoder(conn).Encode(addMessage)
+	//e := time.Now().UnixNano() / 1e6
+	//fmt.Println("send time:", e-t)
+	err2 := json.NewEncoder(conn2).Encode(addMessage)
+	//e2 := time.Now().UnixNano() / 1e6
+	//fmt.Println("send time:", e2-t)
+	if err != nil || err2 != nil {
+		fmt.Println("序列化失败")
+		return
+	}
+}
+
 func sendPack(ip string) {
 	conn, err := net.Dial("tcp", ip)
 	defer conn.Close()

@@ -16,7 +16,6 @@ const (
 	//ADDR_1,ADDR_2 = "192.168.1.3:9003","192.168.1.4:9004"
 	recvMessageNum=10000
 	train=120000
-	trainNum       = 12 //12秒轮训
 )
 //需要连接的地址
 var addrList = []string{ADDR_2,ADDR_1}
@@ -33,13 +32,14 @@ var tickerEnd =time.NewTicker(1 * time.Hour)
 var tickerStart =time.NewTicker(1 * time.Hour)
 var selectLevel *time.Ticker = time.NewTicker(10 * time.Hour)
 //以上是提供webServer相关参数
-var block = make([][]string, 0)
+var block = make([]string, 0)
 
 var sendMess =make(chan string,1)//收到数据,可以往其他节点发送
 
 //test
 //var startTimes=time.Now().UnixNano()/1e6 //todo
 func main() {
+	initConf()
 	levelDB=NewLevelDB()
 	//ticker := time.NewTicker(12 * time.Second)
 	/*time.AfterFunc(12*time.Second, func() {
@@ -76,10 +76,10 @@ func main() {
 		//after:=time.Now().UnixNano()/1e6
 		//fmt.Println("after Func",after-startTimes)//todo
 	})*/
-
 	go getMessage()
 	go webServer()
 	go ServerListen()
+
 	for{
 		select {
 		case <-closecreateMess:
@@ -94,7 +94,7 @@ func main() {
 			}
 
 			fmt.Println("查询对应的数据 1 hour")
-			s := GetBlockKey2[0][2]
+			s := GetBlockKey2[0]
 			page := GetPage(s, 10, 20)
 			fmt.Printf("我就想看看package查询的分页是啥:%v\n", page)
 		case <-tickerStart.C:

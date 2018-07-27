@@ -40,7 +40,7 @@ func levelPut(key []byte, val []byte) {
 	//if err!=nil{
 	//fmt.Println(" 存入就是有问题的 err:",err)
 	//}
-	levelDB.MessSlcie = make([]string, 0)
+	//levelDB.MessSlcie = make([]string, 0)
 	//fmt.Printf("存储了 %v %v \n", key, val)
 }
 
@@ -52,8 +52,18 @@ func GetKey(key string) []byte {
 	return ids
 }
 
+func GetKeyNum(key string)int {
+	ids, err := db.Get([]byte(key), nil)
+	if err != nil {
+		panic(err)
+	}
+	var blockSlice = make([]string, 0)
+	json.Unmarshal(ids,&blockSlice)
+	return len(blockSlice)
+}
+
 //获得所有区块key的集合
-func GetBlockKey() [][]string {
+func GetBlockKey() []string {
 	return block
 }
 

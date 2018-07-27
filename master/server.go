@@ -11,7 +11,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-
 )
 
 type Server struct {
@@ -78,8 +77,8 @@ type web4s struct {
 	TxContent []txcs
 }
 
-var blockCount = make([][]string, 0)
-var blockTest [][]string // = make([][]string, 0)
+var blockCount = make([]string, 0)
+var blockTest []string // = make([][]string, 0)
 
 func Cutstring(str, substri, substrii string) string {
 
@@ -191,10 +190,11 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			var ress *Web1s
 			ress = new(Web1s)
 
-			//获得所有block
-			blockCount = GetBlockKey() //GetBlockKey()
+			//获得所有block的时间戳
+			blockCount = GetBlockKey()
+			//多少个区块
 			ress.Totalblock = len(blockCount)
-
+			fmt.Println("区块num",len(blockCount))
 			var from, to int
 			if f.Bdisplayfrom < 0 {
 				from = 0
@@ -206,9 +206,17 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			} else {
 				to = f.Bdisplayto
 			}
+			//values := GetKey(blockCount[0])
+			//lenblock := len(values)
+			s := blockCount[0]
+			keyNum := GetKeyNum(s)
+			fmt.Println("***************",keyNum)
 
 			for i := from - 1; i < to; i++ {
-				ress.BlockTxs = append(ress.BlockTxs, Txs{Blocknum: i + 1, Txs: 120000})
+				s := blockCount[i]
+				keyNum := GetKeyNum(s)
+				fmt.Println("***************",keyNum)
+				ress.BlockTxs = append(ress.BlockTxs, Txs{Blocknum: i + 1, Txs: keyNum})
 			}
 
 			// // ress.BlockTxs = append(ress.BlockTxs, Txs{Blocknum: 20, Txs: 60000})
@@ -229,7 +237,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			/////////////////////////////////////////////////////////////
 			fp.Close()
 			//返回response 的json数据
-			fmt.Println(bytes)
+			//fmt.Println(bytes)
 			fmt.Fprint(w, string(bytes))
 		}
 
@@ -276,7 +284,10 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			//for k,_:=range blockCount{
 			//	blockNum=append(blockNum,k)
 			//}
-
+			//获得所有block
+			blockCount = GetBlockKey()
+			//第一个区块有多少数据
+			keyNum := GetKeyNum(blockCount[0])
 			for {
 				ttimestamp -= 1
 				ttm := time.Unix(ttimestamp, 0)
@@ -286,7 +297,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 				if ii == 60 {
 					break
 				}
-				web2s.Tpl = append(web2s.Tpl, txpi{Timestamps: ttimestamp, Count: 20000})
+				web2s.Tpl = append(web2s.Tpl, txpi{Timestamps: ttimestamp, Count: keyNum})
 
 			}
 			bytes2, _ := json.Marshal(web2s)
@@ -305,32 +316,43 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprint(w, string(bytes))
 		}
 
+		var total int
 		if intflag == 3 {
 			var ff web3s
 
 			//获得所有block
-			blockCount = blockTest //GetBlockKey()
+			blockCount = GetBlockKey()
 			currentblock := len(blockCount)
 
 			if currentblock-3 > 0 {
-				ff.BlockTxs = append(ff.BlockTxs, StTB{Blocknum: currentblock - 3, Txs: 120000})
-				}
+				keyNum := GetKeyNum(blockCount[currentblock - 4])
+				total+=keyNum
+				ff.BlockTxs = append(ff.BlockTxs, StTB{Blocknum: currentblock - 3, Txs: keyNum})
+			}
 
 			if currentblock-2 > 0 {
-				ff.BlockTxs = append(ff.BlockTxs, StTB{Blocknum: currentblock - 2, Txs: 120000})
-				}
+				keyNum := GetKeyNum(blockCount[currentblock - 3])
+				total+=keyNum
+				ff.BlockTxs = append(ff.BlockTxs, StTB{Blocknum: currentblock - 2, Txs: keyNum})
+			}
 
 			if currentblock-1 > 0 {
-				ff.BlockTxs = append(ff.BlockTxs, StTB{Blocknum: currentblock - 1, Txs: 120000})
-				}
+				keyNum := GetKeyNum(blockCount[currentblock - 2])
+				total+=keyNum
+				ff.BlockTxs = append(ff.BlockTxs, StTB{Blocknum: currentblock - 1, Txs: keyNum})
+			}
 
-			if currentblock > 0{
-					ff.BlockTxs = append(ff.BlockTxs, StTB{Blocknum: currentblock, Txs: 120000})
-				}
-
+			if currentblock > 0 {
+				keyNum := GetKeyNum(blockCount[currentblock - 1])
+				fmt.Println("第几个块",blockCount[currentblock - 1])
+				fmt.Println("keynum是多少",keyNum)
+				total+=keyNum
+				ff.BlockTxs = append(ff.BlockTxs, StTB{Blocknum: currentblock, Txs: keyNum})
+			}
 			bytes, _ := json.Marshal(ff)
 			//返回response 的json数据
-			fmt.Println(string(bytes))
+			fmt.Println("total 是多少",total)
+			//fmt.Println(string(bytes))
 			fmt.Fprint(w, string(bytes))
 		}
 
@@ -351,21 +373,16 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			// currentblock := len(blockCount)
 
 			//获得所有block
-			blockCount =GetBlockKey() //GetBlockKey()
+			blockCount = GetBlockKey() //GetBlockKey()
 			currentblock := len(blockCount)
 			var blklist []string
-			fmt.Println(currentblock)
-			s := blockCount[0][0]
-			blklist= GetPage(s, f.TDisplayfrom, f.TDisplayto+1)
-			if err != nil {
-				blockCount = GetBlockKey()
-				blklist = GetPage(blockCount[currentblock-1][0], f.TDisplayfrom, f.TDisplayto)
-			}
+			s := blockCount[0]
+			blklist = GetPage(s, f.TDisplayfrom, f.TDisplayto+1)
 
 			var i int
 			var w4s *web4s
 			w4s = new(web4s)
-			w4s.Total = 120000
+			w4s.Total = total
 			for i = f.TDisplayfrom; i < f.TDisplayto+1; i++ {
 				ccur := time.Now()
 				ttimestamp := ccur.Unix()
@@ -377,7 +394,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 			bytes, _ := json.Marshal(w4s)
 			//返回response 的json数据
-			fmt.Println(string(bytes))
+			//fmt.Println(string(bytes))
 			fmt.Fprint(w, string(bytes))
 
 			// m.Lock()
