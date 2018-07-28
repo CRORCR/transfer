@@ -6,8 +6,11 @@ import (
 	"fmt"
 	"net"
 	"net/rpc"
+	"sync/atomic"
 	"time"
 )
+
+var timeSaveBlock = time.NewTicker(12 * time.Second)
 
 //服务端监听自己端口
 func Server() {
@@ -17,62 +20,49 @@ func Server() {
 	}
 
 	for {
-		conn, err := listen.Accept()
-		if err != nil {
-			fmt.Println("connection is fail,err: ", err)
-			continue
+		select {
+		case <-timeSaveBlock.C:
+			//block = append(block, levelDBSlice)
+			//fmt.Println("6秒",atomic.LoadInt32(&count))
+			levelDB.MessMap = make(map[[16]byte]int, 0)
+			//sendMess <- "ok"
+			//writeInfo <- levelDBSlice
+			//levelDBSlice = make([]string, 0)
+			return
+		default:
+			conn, err := listen.Accept()
+			if err != nil {
+				fmt.Println("connection is fail,err: ", err)
+				continue
+			}
+			proess(conn)
 		}
-		ch <- struct{}{}
-		go proess(conn)
 	}
 }
 
-var writeInfo = make(chan []string, 1)
-var ch = make(chan interface{}, 1)
+var writeInfo = make(chan []string)
 
 func proess(conn net.Conn) {
+	defer conn.Close()
 	for {
 		gotMap := make([]string, 0)
 		start := time.Now().UnixNano() / 1e6
 		json.NewDecoder(conn).Decode(&gotMap)
 		end := time.Now().UnixNano() / 1e6
 
-		if (end - start) == 0 {
-			<-ch
-			return
-		}
-		fmt.Println("接收数据时间:", end-start)
-
 		if len(gotMap) != 0 {
-			conn.Close()
+			fmt.Println("接收数据时间:", end-start)
 			levelDB.manage(gotMap)
 			gotMap = make([]string, 0)
-			if len(levelDBSlice) >= trainNum {
-				//打包时间 生成一个包   12w数据备份清空,map去重清空 只留下levelDB供webserver使用
-				block = append(block, levelDBSlice)
-				fmt.Println("已经有12w了")
-				fmt.Printf("block:%+v\n", block)
-				levelDB.MessMap = make(map[[16]byte]int, 0)
-				//fmt.Println("然后map置空,下一个12秒,再次计:",len(levelDB.MessMap)) //success
-				sendMess <- "ok"
-				writeInfo <- levelDBSlice
-				levelDBSlice = make([]string, 0)
-				//下次重新计数,打包/发送之前,用于存储数据库 作为key值,方便取出
-				<-ch
-				return
-			}
-			//return
 		} else {
-			<-ch
-			return
+			continue
 		}
 	}
 }
 
-//存入数据库的数据,需要排序,使用自增为key,达到12秒(12万)数据,再取出来 打包,存入数据库
-var levelDBSlice = make([]string, 0)
 
 func (level LevelDB) manage(gotMap []string) {
+	var count int32
 	//去重
 	start := time.Now().UnixNano() / 1e6
 	for _, v := range gotMap {
@@ -83,53 +73,46 @@ func (level LevelDB) manage(gotMap []string) {
 			//fmt.Printf("重复的是啥 line:%s hash:%v \n", v, sum)
 			levelDB.lock.Unlock()
 			continue
+		}else if len(levelDB.MessMap)==500000{
+			levelDB.MessMap=make(map[[16]byte]int,0)
+			levelDB.lock.Unlock()
 		} else {
 			levelDB.MessMap[sum] = 1
-			levelDB.MessSlcie = append(levelDB.MessSlcie, v)
+			//levelDB.MessSlcie = append(levelDB.MessSlcie, v)
+			atomic.AddInt32(&count, 1)
 			levelDB.lock.Unlock()
 		}
 	}
+	writeInfo<-gotMap
 	end := time.Now().UnixNano() / 1e6
 	fmt.Println("去重", end-start)
-	fmt.Println("一共多少数据",len(levelDB.MessSlcie))
+	fmt.Println("一共多少数据", atomic.LoadInt32(&count))
 	//去重完成,存入数据库
-	bytes, err := json.Marshal(levelDB.MessSlcie)
-	if err != nil {
-		fmt.Println("存储序列化失败")
-		return
-	}
-	intType := fmt.Sprintf("%v", time.Now().UnixNano())
-	levelPut([]byte(intType), bytes)
-	//0-12w个消息 存入slice中,打包的时候,需要情况这个切片
-	levelDBSlice = append(levelDBSlice, intType)
+	//bytes, err := json.Marshal(levelDB.MessSlcie)
+	//if err != nil {
+	//	fmt.Println("存储序列化失败")
+	//	return
+	//}
+	//intType := fmt.Sprintf("%v", time.Now().UnixNano())
+	//levelPut([]byte(intType), bytes)
+	////0-12w个消息 存入slice中,打包的时候,需要情况这个切片
+	//levelDBSlice = append(levelDBSlice, intType)
 	return
 }
+//存入数据库的数据,需要排序,使用自增为key,达到12秒(12万)数据,再取出来 打包,存入数据库
+//var levelDBSlice = make([]string, 0)
 
 func Client() {
 	fmt.Println("进入client")
-	fmt.Println("levelNum:", len(levelDBSlice))
 	//主节点需要往从节点都发送数据
-
-	select {
-	case send := <-writeInfo:
-		for i := 0; i < len(send); i++ {
-			conn := dialSer(ADDR_1)
-			key, err := GetKey(send[i])
-			if err != nil {
-				conn.Close()
-				continue
-			}
-			sendMess := make([]string, recvMessageNum)
-			json.Unmarshal(key, sendMess)
-			err = json.NewEncoder(conn).Encode(&sendMess)
-			if err != nil {
-				//fmt.Println("序列化失败")
-				return
-			}
-			conn.Close()
+	conn := dialSer(ADDR_1)
+	defer conn.Close()
+	for {
+		select {
+		case addMessage := <-writeInfo:
+			json.NewEncoder(conn).Encode(addMessage)
+		default:
 		}
-	default:
-
 	}
 }
 

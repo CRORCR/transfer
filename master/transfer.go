@@ -33,7 +33,7 @@ func proess(conn net.Conn) {
 		json.NewDecoder(conn).Decode(&gotMap)
 		manage(gotMap)
 		if len(levelDB.MessSlcie) == train {
-			fmt.Println("容器长度:", len(levelDB.MessSlcie))
+			//fmt.Println("容器长度:", len(levelDB.MessSlcie))
 			return
 		}
 	}
@@ -53,28 +53,19 @@ func manage(gotMap []string) {
 	}
 }
 
-var conn,conn2 net.Conn
-func conne(){
-	conn = dialSer(addrList[0])
-	conn2 = dialSer(addrList[1])
-}
-
-
 func Client() {
-	//主节点需要往从节点都发送数据
-	conne()
-		//fmt.Printf("整个节点是什么%s \n", levelDB.MessSlcie)
-	addMessage := <-chMess
-	//t := time.Now().UnixNano() / 1e6
-	err := json.NewEncoder(conn).Encode(addMessage)
-	//e := time.Now().UnixNano() / 1e6
-	//fmt.Println("send time:", e-t)
-	err2 := json.NewEncoder(conn2).Encode(addMessage)
-	//e2 := time.Now().UnixNano() / 1e6
-	//fmt.Println("send time:", e2-t)
-	if err != nil || err2 != nil {
-		fmt.Println("序列化失败")
-		return
+
+	conn := dialSer(addrList[0])
+	conn2 := dialSer(addrList[1])
+	defer conn.Close()
+	defer conn2.Close()
+	for {
+		select {
+		case addMessage := <-chMess:
+			json.NewEncoder(conn).Encode(addMessage)
+			json.NewEncoder(conn2).Encode(addMessage)
+		default:
+		}
 	}
 }
 
@@ -88,7 +79,6 @@ func sendPack(ip string) {
 	writer := bufio.NewWriter(conn)
 	writer.WriteString("flying")
 }
-
 
 func dialSer(id string) (conn net.Conn) {
 	for {

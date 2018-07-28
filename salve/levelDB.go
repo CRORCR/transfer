@@ -52,9 +52,9 @@ func GetKey(key string)(ids []byte,err error) {
 }
 
 //获得所有区块key的集合
-func GetBlockKey() [][]string {
-	return block
-}
+//func GetBlockKey() [][]string {
+//	return block
+//}
 
 //根据对应的区块获得区块详细交易数据
 func GetPage(blockKey string,start,end int)([]string){

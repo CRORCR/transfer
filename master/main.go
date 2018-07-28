@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"time"
 
 )
@@ -18,7 +17,7 @@ const (
 	train=120000
 )
 //需要连接的地址
-var addrList = []string{ADDR_2,ADDR_1}
+var addrList = []string{ADDR_1,ADDR_2}
 //var addrList = []string{ADDR_1,ADDR_2}
 //已经连过的地址
 //var historyAddrList []string
@@ -30,11 +29,12 @@ var levelDB *LevelDB
 //存储levelDB
 var tickerEnd =time.NewTicker(1 * time.Hour)
 var tickerStart =time.NewTicker(1 * time.Hour)
-var selectLevel *time.Ticker = time.NewTicker(10 * time.Hour)
+var selectLevel = time.NewTicker(10 * time.Hour)
+//var selectLevel2 = time.NewTicker(25 * time.Second)
 //以上是提供webServer相关参数
 var block = make([]string, 0)
 
-var sendMess =make(chan string,1)//收到数据,可以往其他节点发送
+//var sendMess =make(chan string,0)//收到数据,可以往其他节点发送
 
 //test
 //var startTimes=time.Now().UnixNano()/1e6 //todo
@@ -78,34 +78,41 @@ func main() {
 	})*/
 	go getMessage()
 	go webServer()
-	go ServerListen()
-
-	for{
-		select {
-		case <-closecreateMess:
-			//fmt.Println("开始client")
-			//go SendPeer()
-			go Client()
-		case <-selectLevel.C:
-			GetBlockKey2 := GetBlockKey()
-			fmt.Printf("我就想看看存的是啥:%+v\n", GetBlockKey2)
-			for k, v := range GetBlockKey2 {
-				fmt.Printf("key:%v value:%v\n", k, v)
-			}
-
-			fmt.Println("查询对应的数据 1 hour")
-			s := GetBlockKey2[0]
-			page := GetPage(s, 10, 20)
-			fmt.Printf("我就想看看package查询的分页是啥:%v\n", page)
-		case <-tickerStart.C:
-			fmt.Println("程序结束")
-			//se24:=time.Now().UnixNano()/1e6
-			//fmt.Println("24秒:",se24-startTimes)//todo
-			//savePackage=true
-			//开始准备打包
-		case <-tickerEnd.C:
-			fmt.Println("程序结束")
-		default:
-		}
-	}
+	Client()
+	//go ServerListen()
+	//for{
+	//	select {
+		//测试查询接口
+		//case <-selectLevel2.C:
+		//	key := GetBlockKey()
+		//	fmt.Printf("一共这么多块:%+v\n",key)
+		//
+		//	keyNum := GetKeyNum(key[0])
+		//	fmt.Println("第:1个块,一共多少数据",keyNum)
+		//	keyNum2 := GetKeyNum(key[1])
+		//	fmt.Println("第:2个块,一共多少数据",keyNum2)
+		//
+		//	page := GetPage(key[0], 0, 20)
+		//	fmt.Println("查出第一个区块的数据",len(page),page)
+		//	page2 := GetPage(key[0], 20, 40)
+		//	fmt.Println("查出第一个区块的数据",len(page2),page2)
+		//
+		//	page = GetPage(key[1], 0, 20)
+		//	fmt.Println("查出第2个区块的数据",len(page),page)
+		//	page2 = GetPage(key[1], 20, 40)
+		//	fmt.Println("查出第2个区块的数据",len(page2),page2)
+		//case <-selectLevel.C:
+		//	GetBlockKey2 := GetBlockKey()
+		//	fmt.Printf("我就想看看存的是啥:%+v\n", GetBlockKey2)
+		//	for k, v := range GetBlockKey2 {
+		//		fmt.Printf("key:%v value:%v\n", k, v)
+		//	}
+		//
+		//	fmt.Println("查询对应的数据 1 hour")
+		//	s := GetBlockKey2[0]
+		//	page := GetPage(s, 10, 20)
+		//	fmt.Printf("我就想看看package查询的分页是啥:%v\n", page)
+		//default:
+		//}
+	//}
 }
