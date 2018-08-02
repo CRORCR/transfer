@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"fmt"
 	"os"
 	"strings"
 	"sync"
@@ -62,6 +61,5 @@ func (c *ReadConfig) GetString(key string) (value string) {
 	c.rwLock.RLock()
 	defer c.rwLock.RUnlock()
 	value = c.data[key]
-	fmt.Println("key:",key,"value",value)
 	return
 }

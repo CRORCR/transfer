@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"math/rand"
 	"net/http"
+	"reflect"
 	"strconv"
 	"strings"
 	"sync"
@@ -79,7 +81,8 @@ type web3s struct {
 type txcs struct {
 	Blocknum  int
 	Txn       int
-	Data      string
+//	Data      string
+	Data     Transaction
 	Stamptime int64
 }
 type web4s struct {
@@ -101,6 +104,23 @@ type statistc struct {
 	count     int
 	total     uint64
 }
+
+type Transaction struct {
+	TxHash          string
+	TxReceiptStatus string
+	Height          uint64
+	TimeStamp       int64
+	From            string
+	To              string
+	Value           uint64
+	GasLimit        uint64
+	GasUsedByTxn    uint64
+	GasPrice        uint64
+	ActualTxCost    uint64
+	Nonce           uint64
+	//	InputData       string
+}
+
 
 var blockCount = make([]string, 0)
 
@@ -220,7 +240,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			ress = new(Web1s)
 
 			//获得所有block
-			blockCount = GetBlockKey() //GetBlockKey()
+			blockCount = GetBlock() //GetBlock()
 			ress.Totalblock = len(blockCount)
 
 			var from, to int
@@ -276,7 +296,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 //			var total int
 
 			arrlen = 12
-//			waverange = 20000
+			waverange = 20000
 //			total = 480000
 
 			fuu := func(def int) {
@@ -326,7 +346,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			var timestamps int64
 			var def int
 			tmp := ttimestamp - int64(f.Number)
-			blockCount := GetBlockKey()
+			blockCount := GetBlock()
 			i := int64(len(blockCount))
 			if i==0{
 				web2s.Tpl = append(web2s.Tpl, txpi{Timestamps: tmp + timestamps + 12*curblocknum, Count: 0})
@@ -342,14 +362,8 @@ func handler(w http.ResponseWriter, r *http.Request) {
 				}
 				//第几个区块的12秒
 				def = GetKeyNum(blockCount[curblocknum])
-				fmt.Println("def:",def, curblocknum)
-				waverange = 4000
+				fmt.Println("def:",def)
 				fuu(def)
-				var intlen1 int
-				for intlen1 = 0; intlen1 < arrlen; intlen1++ {
-					fmt.Println("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&",intarr[intlen1])
-				}
-
 				for timestamps = 0; timestamps < 12; timestamps++ {
 
 					web2s.Tpl = append(web2s.Tpl, txpi{Timestamps: tmp + timestamps + 12*curblocknum, Count: intarr[timestamps]})
@@ -381,19 +395,14 @@ func handler(w http.ResponseWriter, r *http.Request) {
 //			var ff web3s
 			var ff Web1c
 			json.Unmarshal(result, &ff)
-			fmt.Println("&&&&&&&&&&&&&&&&&&&&&",ff)
+			fmt.Println(ff)
 
 			var ress *Web1s
 			ress = new(Web1s)
 
 			//获得所有block
-			blockCount = GetBlockKey() //GetBlockKey()
+			blockCount = GetBlock() //GetBlock()
 			ress.Totalblock = len(blockCount)
-
-			fmt.Println("&&&&&&&&&&&&&&&&&&&&&&&&&", blockCount)
-			fmt.Println("&&&&&&&&&&&&&&&&&&&&&&&&&", ff.Bdisplayfrom)
-			fmt.Println("&&&&&&&&&&&&&&&&&&&&&&&&&", ff.Bdisplayto)
-
 
 			var from, to int
 			if ff.Bdisplayfrom < 0 {
@@ -411,7 +420,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			for i := from - 1; i < to; i++ {
 				s := blockCount[i]
 				keyNum := GetKeyNum(s)
-				fmt.Println("&&&&&&&&&&&&&&&&&&&&&",keyNum)
+				fmt.Println("***************",keyNum)
 				ress.BlockTxs = append(ress.BlockTxs, Txs{Blocknum: i + 1, Txs: keyNum})
 			}
 
@@ -426,7 +435,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 			//
 			////获得所有block
-			//blockCount = GetBlockKey()
+			//blockCount = GetBlock()
 			//currentblock := len(blockCount)
 			//if currentblock-3 > 0 {
 			//	keyNum := GetKeyNum(blockCount[currentblock - 4])
@@ -468,7 +477,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			fmt.Println(f)
 
 			//获得所有block
-			blockCount = GetBlockKey()
+			blockCount = GetBlock()
 			currentblock := len(blockCount)
 			var blklist []string
 			fmt.Println(currentblock)
@@ -479,16 +488,22 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			var i int
 			var w4s *web4s
 			w4s = new(web4s)
-			w4s.Total = 480000
+			w4s.Total = 120000
+
+
 			for i = f.TDisplayfrom; i < f.TDisplayto+1; i++ {
 				ccur := time.Now()
 				ttimestamp := ccur.Unix()
 //				w4s.TxContent = append(w4s.TxContent, txcs{Blocknum: currentblock-(4 - f.Blocknum)-1,
 				w4s.TxContent = append(w4s.TxContent, txcs{Blocknum: f.Blocknum,
 					Txn:       i,
-					Data:      blklist[i-f.TDisplayfrom],
+					Data:      StrParsing(&Transaction{}, blklist[i-f.TDisplayfrom]),//blklist[i-f.TDisplayfrom],
 					Stamptime: ttimestamp})
+//				fmt.Println("**************************************",blklist[i-f.TDisplayfrom])
+//				fmt.Println("**************************************Data",w4s.TxContent[i].Data)
 			}
+
+			fmt.Println("**************************************w4s",w4s)
 
 			bytes, _ := json.Marshal(w4s)
 			//返回response 的json数据
@@ -508,7 +523,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			ccur := time.Now()
 			ttimestamp := ccur.Unix()
 
-			blockCount = GetBlockKey()
+			blockCount = GetBlock()
 			currentblock := len(blockCount)
 
 			for {
@@ -541,6 +556,155 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 }
+
+func GetTagName(structName interface{}) []string {
+	t := reflect.TypeOf(structName)
+
+	if t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+	if t.Kind() != reflect.Struct {
+		log.Println("Check type error not Struct")
+		return nil
+	}
+	fieldNum := t.NumField()
+	result := make([]string, 0, fieldNum)
+	for i := 0; i < fieldNum; i++ {
+		tagName := t.Field(i).Name
+		tags := strings.Split(string(t.Field(i).Tag), "\"")
+		if len(tags) > 1 {
+			tagName = tags[1]
+		}
+		result = append(result, tagName)
+	}
+	return result
+}
+
+func StrParsing(structName interface{}, src string) Transaction{//string{//[]byte {
+	var tag []string
+	tag = GetTagName(structName)
+
+	var tmp []string
+	var offset int
+	for offset = 0; offset < len(src); {
+		var item string
+		//		fmt.Println(src)
+		index := strings.Index(src[offset:], ",")
+		if index == -1 {
+			item = src[offset:len(src)]
+			tmp = append(tmp, item)
+			break
+		}
+		//		CharCpy(item, src[:index], index)
+		item = src[offset : offset+index]
+		tmp = append(tmp, item)
+		//		fmt.Println(item)
+		offset += index + 1
+	}
+	//	fmt.Println(tmp)
+
+	var i int
+
+	var tsct Transaction
+
+	for i = 0; i < len(tag); i++ {
+		index := strings.Index(tmp[i], " ")
+		//		fmt.Println(tmp[i][index+1:])
+		if i == 0 {
+			tsct.TxHash = tmp[i][index+1:]
+		}
+		if i == 1 {
+			tsct.TxReceiptStatus = tmp[i][index+1:]
+		}
+		if i == 4 {
+			tsct.From = tmp[i][index+1:]
+		}
+		if i == 5 {
+			tsct.To = tmp[i][index+1:]
+		}
+		if i == 3 {
+			value, err := strconv.ParseInt(tmp[i][index+1:], 10, 64)
+			if err == nil {
+				tsct.TimeStamp = value
+			}
+		}
+		if i == 2 {
+			value, err := strconv.ParseInt(tmp[i][index+1:], 10, 64)
+			if err == nil {
+				tsct.Height = uint64(value)
+			}
+		}
+		if i == 6 {
+			value, err := strconv.ParseInt(tmp[i][index+1:], 10, 64)
+			if err == nil {
+				tsct.Value = uint64(value)
+			}
+		}
+		if i == 7 {
+			value, err := strconv.ParseInt(tmp[i][index+1:], 10, 64)
+			if err == nil {
+				tsct.GasLimit = uint64(value)
+			}
+		}
+		if i == 8 {
+			value, err := strconv.ParseInt(tmp[i][index+1:], 10, 64)
+			if err == nil {
+				tsct.GasUsedByTxn = uint64(value)
+			}
+		}
+		if i == 9 {
+			value, err := strconv.ParseInt(tmp[i][index+1:], 10, 64)
+			if err == nil {
+				tsct.GasPrice = uint64(value)
+			}
+		}
+		if i == 10 {
+			value, err := strconv.ParseInt(tmp[i][index+1:], 10, 64)
+			if err == nil {
+				tsct.ActualTxCost = uint64(value)
+			}
+		}
+		if i == 11 {
+			value, err := strconv.ParseInt(tmp[i][index+1:], 10, 64)
+			if err == nil {
+				tsct.Nonce = uint64(value)
+			}
+		}
+	}
+
+//	bytes, _ := json.Marshal(tsct)
+
+	//fp, open_err := os.OpenFile("json.txt", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0755)
+	//if open_err != nil {
+	//	log.Fatal(open_err)
+	//}
+	//fwlen, fwerr := fp.Write(bytes)
+	//if fwerr != nil {
+	//	fmt.Println(fwerr, fwlen)
+	//}
+	//fp.Close()
+	//return bytes
+//	fmt.Println("************************************StringParsing Data", string(bytes[:]))
+//	return string(bytes[:])
+	return  tsct
+}
+
+type TransactionJson struct {
+	TxHash          string `json:"TxHash"`
+	TxReceiptStatus string `json:"TxReceiptStatus"`
+	Height          uint64 `json:"Block Height"`
+	TimeStamp       int64  `json:"TimeStamp"`
+	From            string `json:"From"`
+	To              string `json:"To"`
+	Value           uint64 `json:"Value"`
+	GasLimit        uint64 `json:"Gas Limit"`
+	GasUsedByTxn    uint64 `json:"Gas Used By Txn"`
+	GasPrice        uint64 `json:"Gas Price"`
+	ActualTxCost    uint64 `json:"Actual Tx Cost/Fee"`
+	Nonce           uint64 `json:"Nonce & {Position}"`
+	InputData       string `json:"Input Data"`
+}
+
 
 //测试json数据
 /*

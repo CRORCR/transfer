@@ -2,82 +2,132 @@ package main
 
 import (
 	"bufio"
-	"crypto/md5"
 	"encoding/json"
 	"fmt"
 	"net"
-	"net/rpc"
+	"time"
 )
 
-//服务端监听自己端口
-func ServerListen() {
-	listen, err := net.Listen("tcp", ":9002")
-	if err != nil {
-		fmt.Println("端口占用")
-	}
+var blockchan = make(chan []string)
 
-	for {
-		conn, err := listen.Accept()
-		if err != nil {
-			fmt.Println("connection is fail,err: ", err)
-			continue
-		}
-		go proess(conn)
-	}
-}
-
-func proess(conn net.Conn) {
-	defer conn.Close()
-	for {
-		var gotMap = make([]string, recvMessageNum)
-		json.NewDecoder(conn).Decode(&gotMap)
-		manage(gotMap)
-		if len(levelDB.MessSlcie) == train {
-			//fmt.Println("容器长度:", len(levelDB.MessSlcie))
-			return
-		}
-	}
-}
-
-func manage(gotMap []string) {
-	//去重
-	for _, v := range gotMap {
-		sum := md5.Sum([]byte(v))
-		if _, ok := levelDB.MessMap[sum]; ok {
-			//fmt.Println("存在数据", vv)
-			return
-		} else {
-			levelDB.MessMap[sum] = 1
-			levelDB.MessSlcie = append(levelDB.MessSlcie, v)
-		}
-	}
-}
+//func Client() {
+//	var isFlag = true
+//	var blockSave = make([]string, 0)
+//	conn2 := dialSer(ADDR_3)
+//	defer conn2.Close()
+//	timeSaveBlock = time.NewTicker(BLOCKTIME * time.Second)
+//	ti := time.NewTicker(time.Second * 7)
+//	for {
+//		select {
+//		case <-ti.C:
+//			return
+//		case addMessage := <-chMess:
+//			select {
+//			case <-timeSaveBlock.C:
+//				go saveLevelDB()
+//				blockchan <- blockSave
+//				fmt.Println("6秒一共多少数据", len(blockSave))
+//				//计算hash
+//				s := blockSave[0] + blockSave[len(blockSave)-1]
+//				sum := md5.Sum([]byte(s))
+//				fmt.Println("12s hash:", sum)
+//				blockSave = make([]string, 0)
+//			default:
+//				json.NewEncoder(conn2).Encode(addMessage)
+//				fmt.Println("主节点发送多少数据", len(addMessage))
+//				blockSave = append(blockSave, addMessage...)
+//				if isFlag {
+//					timeSaveBlock = time.NewTicker(BLOCKTIME * time.Second)
+//					isFlag = false
+//				}
+//			}
+//		default:
+//		}
+//	}
+//}
 
 func Client() {
-
-	conn := dialSer(addrList[0])
-	conn2 := dialSer(addrList[1])
+	var timeSaveBlock *time.Ticker
+	var blockSave = make([]string, 0)
+	//var isFlag = true
+	conn := dialSer(ADDR_1)
+	conn2 := dialSer(ADDR_2)
 	defer conn.Close()
 	defer conn2.Close()
+	timeSaveBlock = time.NewTicker(BLOCKTIME * time.Second)
+	send := time.NewTicker(1 * time.Second)
+	//ti := time.NewTicker(time.Second * 24)
 	for {
 		select {
+		//case <-ti.C:
+		//	key := GetBlock()
+		//	fmt.Println("多少个块",len(key))
+		//	//获得交易详情
+		//	page := GetPage(key[0],500,1000)
+		//	fmt.Println("交易数量==500?",len(page))
+		//
+		//	//获得每个交易数量
+		//	for _,v:=range key{
+		//		num := GetKeyNum(v)
+		//		fmt.Printf("区块:%v 交易数量:%v\n",v,num)
+		//	}
+		//	return
+			//查看内存
+			//f,err:=os.OpenFile("./men.out",os.O_RDWR|os.O_CREATE,0644)
+			//if err!=nil{
+			//	log.Fatal("err",err)
+			//}
+			//pprof.WriteHeapProfile(f)
+			//f.Close()
+
 		case addMessage := <-chMess:
-			json.NewEncoder(conn).Encode(addMessage)
-			json.NewEncoder(conn2).Encode(addMessage)
+			select {
+			case <-timeSaveBlock.C:
+				go saveLevelDB()
+				blockchan <- blockSave
+				//fmt.Println("count", len(blockSave))
+				//计算hash
+				if len(blockSave)!=0{
+					//s := blockSave[0] + blockSave[len(blockSave)-1]
+					//sum := md5.Sum([]byte(s))
+					//fmt.Println("hash:", sum)
+					blockSave = make([]string, 0)
+				}else{
+					blockSave = make([]string, 0)
+					timeSaveBlock=time.NewTicker(BLOCKTIME * time.Second)
+				}
+
+			case <-send.C:
+				buf:=make([]byte,1024*1024*20)
+				writer := bufio.NewWriter(conn)
+				writer2 := bufio.NewWriter(conn2)
+				buf,_=json.Marshal(addMessage)
+				writer.Write(buf)
+				writer2.Write(buf)
+				writer.Flush()
+				writer2.Flush()
+				//json.NewEncoder(conn).Encode(addMessage)
+				//json.NewEncoder(conn2).Encode(addMessage)
+				//fmt.Println("send message", len(addMessage))
+				intType := fmt.Sprintf("%v", time.Now().UnixNano())
+				levelPut([]byte(intType),buf)
+				blockSave = append(blockSave, intType)
+				//if isFlag {
+				//	timeSaveBlock = time.NewTicker(BLOCKTIME * time.Second)
+				//	isFlag = false
+				//}
+			}
 		default:
 		}
 	}
 }
 
-func sendPack(ip string) {
-	conn, err := net.Dial("tcp", ip)
-	defer conn.Close()
-	if err != nil {
-		fmt.Println("连接失败")
-		return
-	}
-	writer := bufio.NewWriter(conn)
-	writer.WriteString("flying")
+func saveLevelDB() {
+	send := <-blockchan
+	bytes, _ := json.Marshal(send)
+	intType := fmt.Sprintf("%v", time.Now().UnixNano())
+	levelPut([]byte(intType), bytes)
+	SaveBlock(intType)
 }
 
 func dialSer(id string) (conn net.Conn) {
@@ -86,38 +136,8 @@ func dialSer(id string) (conn net.Conn) {
 		if err != nil {
 			continue
 		} else {
-			//fmt.Println("成功建立连接")
 			return conn
 		}
 	}
 }
 
-func callOther() {
-	client, err := DialRpc()
-	var reply string
-	for {
-		err = client.Call("GetStart", 1, &reply)
-		if err != nil {
-			fmt.Println("调用远程服务失败", err)
-			return
-		}
-		fmt.Println("远程服务返回结果：", reply)
-	}
-}
-
-func GetStart(arg int, result *string) error {
-	*result = "ok"
-	return nil
-}
-
-func DialRpc() (client *rpc.Client, err error) {
-	for {
-		client, err = rpc.DialHTTP("tcp", ADDR_1)
-		if err != nil {
-			continue
-		} else {
-			return
-		}
-	}
-	return
-}

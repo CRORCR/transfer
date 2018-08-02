@@ -8,13 +8,12 @@ import (
 type Config struct {
 	BlockTime        string
 	SendNum        int
-
 }
 
 var config = &Config{}
 
 func initConf() {
-	conf, err := NewConfig("./aa.txt")
+	conf, err := NewConfig("./app.conf")
 	if err != nil {
 		fmt.Println("err",err)
 		return

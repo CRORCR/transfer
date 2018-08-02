@@ -4,30 +4,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"sync"
 
 	"github.com/syndtr/goleveldb/leveldb"
+
 )
 
 var db *leveldb.DB
 
-type LevelDB struct {
-	//存储levelDB
-	//LogChan chan []byte
-	MessSlcie []string
-	MessMap   map[[16]byte]int
-	lock      sync.RWMutex
-	//存储所有key值(目前是所有的数据都发)
-	//KeySlice []string
-}
 
-func NewLevelDB()*LevelDB{
-	return &LevelDB{MessSlcie:make([]string,0),MessMap:make(map[[16]byte]int,0)}
-}
-
-func closeLevelDB() {
-	db.Close()
-}
 
 func init() {
 	err := os.RemoveAll("./db")
@@ -39,20 +23,37 @@ func init() {
 
 func levelPut(key []byte, val []byte) {
 	db.Put(key, val, nil)
-	//if err!=nil{
-		//fmt.Println(" 存入就是有问题的 err:",err)
-	//}
-	levelDB.MessSlcie = make([]string, 0)
-	//fmt.Printf("存储了 %v %v \n", key, val)
 }
 
-func GetKey(key string)(ids []byte,err error) {
-	ids, err = db.Get([]byte(key), nil)
-	return ids,err
+func GetKey(key string) []byte {
+	ids, err := db.Get([]byte(key), nil)
+	if err != nil {
+		panic(err)
+	}
+	return ids
 }
 
-//获得所有区块key的集合
-func GetBlockKey() [][]string {
+func SaveBlock(key string)error {
+	getKey := GetKey("block")
+	if getKey==nil{
+		bytes, _ := json.Marshal(key)
+		levelPut([]byte("block"),bytes)
+	}
+	block:=make([]string, 0)
+	json.Unmarshal(getKey,&block)
+	block=append(block,key)
+	bytes, _ := json.Marshal(block)
+	levelPut([]byte("block"),bytes)
+	return nil
+}
+
+func GetBlock()(key []string){
+	ids, err := db.Get([]byte("block"), nil)
+	if err!=nil {
+		return nil
+	}
+	block:=make([]string, 0)
+	json.Unmarshal(ids,&block)
 	return block
 }
 
