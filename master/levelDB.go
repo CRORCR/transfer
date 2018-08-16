@@ -2,10 +2,13 @@ package main
 
 import (
 
-	"encoding/json"
-	"os"
 
-	"github.com/syndtr/goleveldb/leveldb"
+"encoding/json"
+"fmt"
+"os"
+
+"github.com/syndtr/goleveldb/leveldb"
+
 )
 
 var db *leveldb.DB
@@ -70,6 +73,7 @@ func GetKeyNum(key string)int {
 	}
 	return  length
 }
+
 //保存block到数据库,每次保存都判断是否存储,如果不存在就直接存储,如果存在,取出,再存储
 func SaveBlock(key string)error {
 	getKey := GetKey("block")
@@ -85,13 +89,41 @@ func SaveBlock(key string)error {
 	return nil
 }
 
+//记录数据
+func SaveBlockNum(intType string,blockNum []int){
+	bytes, _ := json.Marshal(blockNum)
+	levelPut([]byte(intType),bytes)
+}
+
+//删除block的数据以及block里面的所有数据
+func deleteLevelDB(blockKey string){
+	ids, _ := db.Get([]byte(blockKey), nil)
+
+	block:=make([]string, 0)
+	json.Unmarshal(ids,&block)
+	//删除所有的block里面的时间戳 对应的交易12个
+	for _,v:=range block{
+		db.Delete([]byte(v), nil)
+	}
+	db.Delete([]byte(blockKey), nil)
+}
+
+func deleteLevelNum(intType string){
+	err := db.Delete([]byte(intType), nil)
+	if err!=nil{
+		fmt.Printf("err:%v\n",err)
+	}
+}
+
 func GetBlock()(key []string){
+	//所有的时间戳,这应该是个二维数组
 	ids, err := db.Get([]byte("block"), nil)
 	if err!=nil {
 		return nil
 	}
 	block:=make([]string, 0)
 	json.Unmarshal(ids,&block)
+	//fmt.Printf("所有的时间戳,这应该是个二维数组:%+v\n",block)
 	return block
 }
 
@@ -99,7 +131,7 @@ func GetBlock()(key []string){
 func GetPage(blockKey string,start,end int)([]string){
 	ids, err := db.Get([]byte(blockKey), nil)
 	if err != nil {
-		panic(err)
+		return nil
 	}
 	var blockInfo=make([]string,0)
 	err = json.Unmarshal(ids,&blockInfo)
@@ -111,7 +143,15 @@ func GetPage(blockKey string,start,end int)([]string){
 		blockList=append(blockList,block...)
 	}
 	if err != nil {
-		panic(err)
+		return nil
 	}
 	return blockList[start:end]
+}
+
+//对应区块一共多少数据
+func GetBlockForNum(blockKey string)[]int {
+	ids, _ := db.Get([]byte(blockKey), nil)
+	var blockNum []int
+	json.Unmarshal(ids,&blockNum)
+	return blockNum
 }

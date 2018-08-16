@@ -9,7 +9,6 @@ import (
 	"time"
 )
 
-//var timeSaveBlock *time.Ticker
 var writeInfo = make(chan []string)
 var blockSave = make([]string, 0)
 var messMap = make(map[[16]byte]int, 0)
@@ -25,7 +24,7 @@ func Server() {
 		fmt.Println("connection is fail,err: ", err)
 		return
 	}
-	timeSaveBlock = time.NewTicker(6 * time.Second)
+	timeSaveBlock = time.NewTicker(BLOCKTIME * time.Second)
 	proess(conn)
 }
 
@@ -33,14 +32,16 @@ var timesave int64
 
 var timeSaveBlock *time.Ticker
 
+
 func proess(conn net.Conn) {
 	defer conn.Close()
 	for {
+		send := time.NewTicker(1 * time.Second)
 		gotMap := make([]string, 0)
 		//start := time.Now().UnixNano() / 1e6
 		//decoder := json.NewDecoder(conn)
 		//decoder.Decode(&gotMap)
-		buf := make([]byte, 1024*1024*20)
+		buf := make([]byte, 1024*1024*30)
 
 		n, err := conn.Read(buf)
 		if err == io.EOF {
@@ -64,14 +65,14 @@ func proess(conn net.Conn) {
 
 			messMap = nil
 			messMap = make(map[[16]byte]int, 0)
-			//fmt.Println("6秒一共多少数据", len(blockSave))
-			//s := blockSave[0] + blockSave[len(blockSave)-1]
+			fmt.Println("6秒一共多少数据", len(blockSave))
+			s := blockSave[0] + blockSave[len(blockSave)-1]
 			//fmt.Println("第一条加最后一条", s)
-			//sum := md5.Sum([]byte(s))
-			//fmt.Println("12s hash:", sum)
+			sum := md5.Sum([]byte(s))
+			fmt.Println("12s hash:", sum)
 			blockSave = nil
 			blockSave = make([]string, 0)
-		default:
+		case <-send.C:
 			gotMapCopy := make([]string, len(gotMap))
 			copy(gotMapCopy, gotMap)
 			go manage(gotMapCopy)
@@ -86,7 +87,7 @@ func proess(conn net.Conn) {
 
 //去重
 func manage(gotMap []string) {
-	var messSlcie = make([]string, 0, 65535)
+	var messSlcie = make([]string, 0, 60000)
 	//去重
 	//start := time.Now().UnixNano() / 1e6
 	for _, v := range gotMap {
@@ -108,10 +109,10 @@ func manage(gotMap []string) {
 	writeInfo <- messSlcie
 	//end := time.Now().UnixNano() / 1e6
 	//fmt.Print("去重	", end-start)
-	//fmt.Println("一共多少数据", len(messSlcie))
+	//fmt.Println("一共多少数据", len(messSlcie))todo
 }
 
-var ti = time.NewTicker(time.Second * 120)
+//var ti = time.NewTicker(time.Second * 120)
 
 func Client() {
 	conn := dialSer(ADDR_1)
@@ -145,8 +146,8 @@ func Client() {
 	//}()
 	for {
 		select {
-		case <-ti.C:
-			return
+		//case <-ti.C:
+		//	return
 		case addMessage := <-writeInfo:
 			encoder := json.NewEncoder(conn)
 			encoder.Encode(addMessage)

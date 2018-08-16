@@ -4,7 +4,7 @@ const (
 	//连接主节点
 	ADDR_1 = "localhost:9004"
 	//ADDR_1         = "192.168.1.4:9004"
-	aa = iota
+	BLOCKTIME=12
 )
 
 //var cpuprofile = flag.String("cpuprofile", "", "write cpu profile `file`")

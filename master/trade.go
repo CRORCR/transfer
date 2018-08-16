@@ -16,10 +16,10 @@ func init() {
 var unix  int64
 func getMessage() {
 	for {
-		unix = time.Now().Unix()
+
 		atomic.AddInt32(&count,1)
 		q := rand.Intn(1000)
-		num := 40000 + q
+		num := 50000 + q
 		var send = make([]string, num)
 		for i := 0; i < num; i++ {
 			s := random()
@@ -49,6 +49,7 @@ func random() string {
 		i2 := rand.Intn(52)
 		arr = arr + string(str[i2])
 	}
+	unix = time.Now().Unix()
 	return fmt.Sprintf("TxHash %v,TxReceiptStatus success,Height %v,TimeStamp %v,From %v,To %v,Value 200,GasLimit 200,GasUsedByTxn 17,GasPrice 100,ActualTxCost 7,Nonce 2", string(arr[32:]),atomic.LoadInt32(&count),unix,string(arr[:16]), string(arr[16:32]))
 	//other节点会丢失数据,可能是生成时间戳耗时,我先注释
 	//return fmt.Sprintf("TxHash:%v,TxReceiptStatus:success,Height:%v,TimeStamp:%v,From:%v,To:%v,Value:200,GasLimit:200,GasUsedByTxn:17,GasPrice:100,ActualTxCost:7,Nonce:2", string(arr[32:]),atomic.LoadInt32(&count),time.Now().Unix(),string(arr[:16]), string(arr[16:32]))
